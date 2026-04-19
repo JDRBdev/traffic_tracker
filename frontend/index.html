@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Monitor Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --accent-pink: #ec4899;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.15) 0px, transparent 50%);
+        }
+
+        header {
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .pulse {
+            width: 10px;
+            height: 10px;
+            background-color: var(--accent-green);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-green);
+            animation: pulse-anim 2s infinite;
+        }
+
+        @keyframes pulse-anim {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            gap: 2rem;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .video-container {
+            flex: 2;
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16/9;
+            object-fit: contain;
+            cursor: default;
+        }
+        
+        canvas.editing {
+            cursor: crosshair;
+        }
+
+        .stats-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-title {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 3rem;
+            font-weight: 700;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .stat-value.blue { color: var(--accent-blue); }
+        .stat-value.green { color: var(--accent-green); }
+
+        .controls-card {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            margin-top: auto;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .btn.primary {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        .btn.primary:hover {
+            background: #2563eb;
+        }
+
+        #pink-badge {
+            position: absolute;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: linear-gradient(135deg, var(--accent-pink), #be185d);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(236, 72, 153, 0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        #pink-badge.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .instructions {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .instructions.visible {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @media (max-width: 1024px) {
+            main {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><div class="pulse"></div> Traffic Monitor</h1>
+        <div style="font-size: 0.875rem; color: var(--text-muted)">Live via YOLOv8</div>
+    </header>
+
+    <main>
+        <div class="video-container">
+            <div id="pink-badge">🚗 ¡Vehículo Rosa Detectado!</div>
+            <canvas id="video-canvas"></canvas>
+        </div>
+
+        <div class="stats-panel">
+            <div class="stat-card">
+                <div class="stat-title">Vehículos en Frame</div>
+                <div class="stat-value blue" id="val-vehicles">0</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-title">Peatones en ROI (Paso)</div>
+                <div class="stat-value green" id="val-pedestrians">0</div>
+            </div>
+
+            <div class="controls-card">
+                <div class="stat-title" style="margin-bottom: 1rem">Configuración de ROI</div>
+                <button class="btn" id="btn-edit">Editar Paso de Peatones</button>
+                <button class="btn primary" id="btn-save" style="display: none;">Guardar Polígono</button>
+                <button class="btn" id="btn-cancel" style="display: none;">Cancelar</button>
+                
+                <div class="instructions" id="edit-instructions">
+                    Haz click sobre el vídeo para definir los vértices del polígono (mínimo 3). 
+                    Los vértices se conectarán automáticamente.
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('video-canvas');
+        const ctx = canvas.getContext('2d');
+        const valVehicles = document.getElementById('val-vehicles');
+        const valPedestrians = document.getElementById('val-pedestrians');
+        const pinkBadge = document.getElementById('pink-badge');
+        
+        const btnEdit = document.getElementById('btn-edit');
+        const btnSave = document.getElementById('btn-save');
+        const btnCancel = document.getElementById('btn-cancel');
+        const instructions = document.getElementById('edit-instructions');
+
+        let ws = null;
+        let pinkHideTimeout = null;
+        let isEditing = false;
+        let editedPolygon = [];
+        let currentFrameImg = null;
+
+        // Connect WebSocket
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            ws = new WebSocket(wsUrl);
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                // Update stats
+                valVehicles.textContent = data.vehicle_count;
+                valPedestrians.textContent = data.pedestrian_in_roi;
+
+                // Handle pink badge
+                if (data.pink_detected) {
+                    pinkBadge.classList.add('visible');
+                    if (pinkHideTimeout) clearTimeout(pinkHideTimeout);
+                    pinkHideTimeout = setTimeout(() => {
+                        pinkBadge.classList.remove('visible');
+                    }, 5000);
+                }
+
+                // Render frame
+                if (data.frame) {
+                    const img = new Image();
+                    img.onload = () => {
+                        // Set canvas dimensions to match image source
+                        if (canvas.width !== img.width || canvas.height !== img.height) {
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                        }
+                        currentFrameImg = img;
+                        renderCanvas();
+                    };
+                    img.src = 'data:image/jpeg;base64,' + data.frame;
+                }
+            };
+
+            ws.onclose = () => {
+                console.log("WebSocket disconnected. Reconnecting in 2s...");
+                setTimeout(connect, 2000);
+            };
+        }
+
+        function renderCanvas() {
+            if (!currentFrameImg) return;
+            
+            // Draw the current video frame
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(currentFrameImg, 0, 0, canvas.width, canvas.height);
+
+            // If we are editing, overlay the custom polygon
+            if (isEditing && editedPolygon.length > 0) {
+                ctx.beginPath();
+                ctx.moveTo(editedPolygon[0][0], editedPolygon[0][1]);
+                for (let i = 1; i < editedPolygon.length; i++) {
+                    ctx.lineTo(editedPolygon[i][0], editedPolygon[i][1]);
+                }
+                if (editedPolygon.length >= 3) {
+                    ctx.closePath();
+                    ctx.fillStyle = 'rgba(236, 72, 153, 0.3)'; // Pink overlay
+                    ctx.fill();
+                }
+                ctx.strokeStyle = '#ec4899';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw vertices
+                ctx.fillStyle = '#fff';
+                for (const pt of editedPolygon) {
+                    ctx.beginPath();
+                    ctx.arc(pt[0], pt[1], 4, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            }
+        }
+
+        // Canvas Click Handler (for ROI editing)
+        canvas.addEventListener('click', (e) => {
+            if (!isEditing || !currentFrameImg) return;
+
+            const rect = canvas.getBoundingClientRect();
+            // Calculate scale between displayed size and actual internal canvas size
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const x = Math.round((e.clientX - rect.left) * scaleX);
+            const y = Math.round((e.clientY - rect.top) * scaleY);
+
+            editedPolygon.push([x, y]);
+            renderCanvas();
+        });
+
+        // ROI Controls
+        btnEdit.addEventListener('click', () => {
+            isEditing = true;
+            editedPolygon = [];
+            canvas.classList.add('editing');
+            
+            btnEdit.style.display = 'none';
+            btnSave.style.display = 'block';
+            btnCancel.style.display = 'block';
+            instructions.classList.add('visible');
+        });
+
+        btnCancel.addEventListener('click', () => {
+            isEditing = false;
+            editedPolygon = [];
+            canvas.classList.remove('editing');
+            
+            btnEdit.style.display = 'block';
+            btnSave.style.display = 'none';
+            btnCancel.style.display = 'none';
+            instructions.classList.remove('visible');
+        });
+
+        btnSave.addEventListener('click', async () => {
+            if (editedPolygon.length < 3) {
+                alert('El polígono debe tener al menos 3 vértices.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/config/roi', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ polygon: editedPolygon })
+                });
+                
+                if (response.ok) {
+                    // Success
+                    isEditing = false;
+                    canvas.classList.remove('editing');
+                    btnEdit.style.display = 'block';
+                    btnSave.style.display = 'none';
+                    btnCancel.style.display = 'none';
+                    instructions.classList.remove('visible');
+                } else {
+                    alert('Error al guardar el ROI.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Error de conexión al guardar.');
+            }
+        });
+
+        // Init
+        connect();
+        
+        // Add a dummy test image to show canvas bounds if ws is not immediately ready
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, canvas.width || 640, canvas.height || 480);
+    </script>
+</body>
+</html>
