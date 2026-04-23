@@ -3,7 +3,7 @@ import base64
 from contextlib import asynccontextmanager
 
 import cv2
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from loguru import logger
@@ -66,9 +66,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Mount the static frontend directory
-app.mount("/static", StaticFiles(directory="frontend", html=True), name="frontend")
-
 
 class ROIPayload(BaseModel):
     polygon: list[list[int]]
@@ -92,7 +89,8 @@ def update_roi(payload: ROIPayload):
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, background_tasks: BackgroundTasks):
+async def websocket_endpoint(websocket: WebSocket):
+    # Fix: Removed BackgroundTasks from signature as it doesn't execute in WebSockets
     await websocket.accept()
     logger.info("WebSocket client connected.")
 
@@ -104,7 +102,7 @@ async def websocket_endpoint(websocket: WebSocket, background_tasks: BackgroundT
 
             # Read frame
             frame = reader.read_frame() if reader else None
-            
+
             if frame is None:
                 # If stream lags or drops, sleep briefly and try again
                 await asyncio.sleep(0.1)
@@ -113,13 +111,15 @@ async def websocket_endpoint(websocket: WebSocket, background_tasks: BackgroundT
             # Run detection
             if detector:
                 result = detector.detect(frame)
-                
+
                 # Check for pink vehicles and trigger notification
                 pink_detected = len(result.pink_vehicles) > 0
                 if pink_detected and notifier:
                     # Notify with the first pink vehicle crop found
                     best_crop = result.pink_vehicles[0]
-                    background_tasks.add_task(notifier.notify, best_crop)
+                    # Fix: Replaced background_tasks.add_task with asyncio.create_task and to_thread
+                    # since notifier.notify is a synchronous I/O bound method
+                    asyncio.create_task(asyncio.to_thread(notifier.notify, best_crop))
 
                 # Encode frame for frontend
                 _, buf = cv2.imencode(".jpg", result.annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
@@ -145,3 +145,6 @@ async def websocket_endpoint(websocket: WebSocket, background_tasks: BackgroundT
     except Exception as e:
         logger.exception(f"WebSocket error: {e}")
         await websocket.close()
+
+# Mount the static frontend directory at the root (must be at the end to avoid intercepting routes)
+app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")
