@@ -115,11 +115,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 # Check for pink vehicles and trigger notification
                 pink_detected = len(result.pink_vehicles) > 0
                 if pink_detected and notifier:
-                    # Notify with the first pink vehicle crop found
-                    best_crop = result.pink_vehicles[0]
-                    # Fix: Replaced background_tasks.add_task with asyncio.create_task and to_thread
-                    # since notifier.notify is a synchronous I/O bound method
-                    asyncio.create_task(asyncio.to_thread(notifier.notify, best_crop))
+                    # Notify for each pink vehicle found
+                    for crop, track_id in zip(result.pink_vehicles, result.pink_vehicle_ids):
+                        asyncio.create_task(asyncio.to_thread(notifier.notify, crop, track_id))
 
                 # Encode frame for frontend
                 _, buf = cv2.imencode(".jpg", result.annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 80])

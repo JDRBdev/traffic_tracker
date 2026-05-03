@@ -11,17 +11,33 @@ from config import settings
 
 
 class EmailNotifier:
-    """Handles sending email notifications with a cooldown window."""
+    """Handles sending email notifications with a per-car cooldown."""
 
     def __init__(self):
         self._last_sent_at: float = 0.0
+        self._notified_cars: dict[int, float] = {}
 
-    def notify(self, frame_crop: np.ndarray) -> None:
-        """Sends an email with the attached image crop if cooldown has passed."""
+    def notify(self, frame_crop: np.ndarray, track_id: int = -1) -> None:
+        """Sends an email with the attached image crop if the car hasn't been notified yet."""
         now = time.time()
-        if now - self._last_sent_at < settings.EMAIL_COOLDOWN_SECONDS:
-            logger.info("Notification suppressed due to cooldown window.")
-            return
+        
+        # Cleanup old entries to prevent memory leaks (cap at 1000 items)
+        if len(self._notified_cars) > 1000:
+            # Remove oldest 500
+            sorted_keys = sorted(self._notified_cars, key=self._notified_cars.get)
+            for k in sorted_keys[:500]:
+                self._notified_cars.pop(k, None)
+                
+        if track_id != -1:
+            if track_id in self._notified_cars:
+                return  # Already notified for this car
+            self._notified_cars[track_id] = now
+        else:
+            # Fallback to global cooldown if tracking ID is not available
+            if now - self._last_sent_at < settings.EMAIL_COOLDOWN_SECONDS:
+                logger.info("Notification suppressed due to global cooldown.")
+                return
+            self._last_sent_at = now
 
         logger.info("Preparing pink vehicle notification...")
 

@@ -32,3 +32,27 @@ def test_notifier_cooldown():
         # 2. Second notify immediately after - should hit cooldown and not send
         notifier.notify(dummy_crop)
         assert not mock_smtp_2.called
+
+def test_notifier_per_car():
+    """Test that notify() uses per-car suppression when track_id is provided."""
+    settings.SENDGRID_API_KEY = ""
+    settings.SMTP_USER = "test@test.com"
+    settings.SMTP_PASSWORD = "password"
+    
+    notifier = EmailNotifier()
+    dummy_crop = np.zeros((100, 100, 3), dtype=np.uint8)
+    
+    # 1. Notify for car 1
+    with patch("smtplib.SMTP") as mock_smtp:
+        notifier.notify(dummy_crop, track_id=1)
+        assert mock_smtp.called
+        
+    # 2. Notify for car 1 again - should be suppressed
+    with patch("smtplib.SMTP") as mock_smtp_2:
+        notifier.notify(dummy_crop, track_id=1)
+        assert not mock_smtp_2.called
+        
+    # 3. Notify for car 2 immediately - should NOT be suppressed
+    with patch("smtplib.SMTP") as mock_smtp_3:
+        notifier.notify(dummy_crop, track_id=2)
+        assert mock_smtp_3.called

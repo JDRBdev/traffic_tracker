@@ -4,258 +4,339 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Traffic Monitor Dashboard</title>
+    
+    <!-- Fallback Font for Windows -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    
     <style>
         :root {
-            --bg-dark: #0f172a;
-            --panel-bg: rgba(30, 41, 59, 0.7);
-            --accent-pink: #ec4899;
-            --accent-blue: #3b82f6;
-            --accent-green: #10b981;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
+            /* Apple Color System */
+            --primary: #0066cc;
+            --primary-focus: #0071e3;
+            --primary-on-dark: #2997ff;
+            --ink: #1d1d1f;
+            --body: #1d1d1f;
+            --body-on-dark: #ffffff;
+            --body-muted: #cccccc;
+            --ink-muted-80: #333333;
+            --ink-muted-48: #7a7a7a;
+            --divider-soft: #f0f0f0;
+            --hairline: #e0e0e0;
+            --canvas: #ffffff;
+            --canvas-parchment: #f5f5f7;
+            --surface-pearl: #fafafc;
+            --surface-tile-1: #272729;
+            --surface-tile-2: #2a2a2c;
+            --surface-tile-3: #252527;
+            --surface-black: #000000;
+            --surface-chip-translucent: rgba(210, 210, 215, 0.64);
+            
+            /* Custom */
+            --pink: #ec4899;
+
+            /* Radii */
+            --radius-none: 0px;
+            --radius-xs: 5px;
+            --radius-sm: 8px;
+            --radius-md: 11px;
+            --radius-lg: 18px;
+            --radius-pill: 9999px;
+            --radius-full: 50%;
         }
 
-        body {
+        html, body {
             margin: 0;
             padding: 0;
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            min-height: 100vh;
+            height: 100%;
+            background-color: var(--canvas-parchment);
+            color: var(--ink);
+            font-family: "SF Pro Text", "Inter", system-ui, -apple-system, sans-serif;
+            font-feature-settings: "ss03" 1; /* Inter rounded 'a' */
+            font-size: 17px;
+            font-weight: 400;
+            line-height: 1.47;
+            letter-spacing: -0.374px;
             display: flex;
             flex-direction: column;
-            overflow-x: hidden;
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.15) 0px, transparent 50%);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        header {
-            padding: 1.5rem 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        h1 {
-            margin: 0;
-            font-size: 1.5rem;
+        /* Typography */
+        .display-lg {
+            font-family: "SF Pro Display", "Inter", system-ui, -apple-system, sans-serif;
+            font-size: 40px;
             font-weight: 600;
+            line-height: 1.1;
+            letter-spacing: 0;
+        }
+
+        .tagline {
+            font-family: "SF Pro Display", "Inter", system-ui, -apple-system, sans-serif;
+            font-size: 21px;
+            font-weight: 600;
+            line-height: 1.19;
+            letter-spacing: 0.231px;
+        }
+
+        .body-strong {
+            font-weight: 600;
+            line-height: 1.24;
+            letter-spacing: -0.374px;
+        }
+
+        .caption {
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 1.43;
+            letter-spacing: -0.224px;
+        }
+
+        .nav-link {
+            font-size: 12px;
+            font-weight: 400;
+            line-height: 1.0;
+            letter-spacing: -0.12px;
+        }
+
+        /* Navigations */
+        .global-nav {
+            height: 44px;
+            background-color: var(--surface-black);
+            color: var(--body-on-dark);
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .pulse {
-            width: 10px;
-            height: 10px;
-            background-color: var(--accent-green);
-            border-radius: 50%;
-            box-shadow: 0 0 10px var(--accent-green);
-            animation: pulse-anim 2s infinite;
+            justify-content: space-between;
+            padding: 0 20px;
         }
 
-        @keyframes pulse-anim {
-            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        .sub-nav-frosted {
+            height: 52px;
+            background-color: rgba(245, 245, 247, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--hairline);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
+        /* Buttons */
+        .btn {
+            font-family: "SF Pro Text", "Inter", system-ui, -apple-system, sans-serif;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            box-sizing: border-box;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: #ffffff;
+            font-size: 17px;
+            font-weight: 400;
+            padding: 11px 22px;
+            border-radius: var(--radius-pill);
+        }
+
+        .btn-primary:focus-visible {
+            outline: 2px solid var(--primary-focus);
+            outline-offset: 2px;
+        }
+
+        .btn-secondary-pill {
+            background-color: transparent;
+            color: var(--primary);
+            font-size: 17px;
+            font-weight: 400;
+            padding: 10px 21px; /* 1px less to account for border */
+            border-radius: var(--radius-pill);
+            border: 1px solid var(--primary);
+        }
+
+        .btn-dark-utility {
+            background-color: var(--ink);
+            color: var(--body-on-dark);
+            font-size: 14px;
+            font-weight: 400;
+            letter-spacing: -0.224px;
+            padding: 8px 15px;
+            border-radius: var(--radius-sm);
+        }
+
+        /* Layout */
         main {
             flex: 1;
             display: flex;
-            gap: 2rem;
-            padding: 2rem;
-            max-width: 1400px;
+            gap: 32px;
+            padding: 48px 40px;
+            max-width: 1440px;
             margin: 0 auto;
             width: 100%;
             box-sizing: border-box;
         }
 
+        /* Cards */
+        .store-utility-card {
+            background-color: var(--canvas);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            border: 1px solid var(--hairline);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+        }
+
         .video-container {
-            flex: 2;
-            position: relative;
-            background: #000;
-            border-radius: 12px;
+            flex: 3.5;
+            padding: 12px; /* reduced padding to maximize video size */
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-frame {
+            width: 100%;
+            max-width: 100%;
+            border-radius: var(--radius-sm);
             overflow: hidden;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: rgba(0,0,0,0.22) 3px 5px 30px 0;
+            background-color: var(--surface-black);
+            position: relative;
+            line-height: 0;
         }
 
         canvas {
-            display: block;
             width: 100%;
             height: auto;
             aspect-ratio: 16/9;
-            object-fit: contain;
+            object-fit: cover;
             cursor: default;
+            display: block;
         }
-        
+
         canvas.editing {
             cursor: crosshair;
         }
 
         .stats-panel {
             flex: 1;
+            min-width: 280px;
             display: flex;
             flex-direction: column;
-            gap: 1.5rem;
+            gap: 24px;
         }
 
         .stat-card {
-            background: var(--panel-bg);
-            backdrop-filter: blur(12px);
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: transform 0.2s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-2px);
-        }
-
-        .stat-title {
-            font-size: 0.875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
+            color: var(--ink);
         }
 
         .stat-value {
-            font-size: 3rem;
-            font-weight: 700;
-            margin: 0;
-            line-height: 1;
+            margin-top: 8px;
         }
 
-        .stat-value.blue { color: var(--accent-blue); }
-        .stat-value.green { color: var(--accent-green); }
+        .stat-value.blue { color: var(--primary); }
+        .stat-value.green { color: #10b981; }
 
         .controls-card {
-            background: var(--panel-bg);
-            backdrop-filter: blur(12px);
-            border-radius: 12px;
-            padding: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
             margin-top: auto;
-        }
-
-        .btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            width: 100%;
-            margin-bottom: 0.5rem;
-        }
-
-        .btn:hover {
-            background: rgba(255, 255, 255, 0.15);
-        }
-
-        .btn.primary {
-            background: var(--accent-blue);
-            border-color: var(--accent-blue);
-        }
-
-        .btn.primary:hover {
-            background: #2563eb;
+            gap: 12px;
         }
 
         #pink-badge {
             position: absolute;
-            top: 1rem;
+            top: 24px;
             left: 50%;
-            transform: translateX(-50%) translateY(-20px);
-            background: linear-gradient(135deg, var(--accent-pink), #be185d);
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px;
+            transform: translateX(-50%);
+            background-color: var(--pink);
+            color: #ffffff;
+            padding: 8px 16px;
+            border-radius: var(--radius-pill);
+            font-size: 14px;
             font-weight: 600;
-            font-size: 1rem;
-            box-shadow: 0 10px 25px -5px rgba(236, 72, 153, 0.5);
+            box-shadow: 0 6px 18px rgba(236,72,153,0.18);
             opacity: 0;
             visibility: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.28s ease;
             z-index: 10;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
         }
 
         #pink-badge.visible {
             opacity: 1;
             visibility: visible;
-            transform: translateX(-50%) translateY(0);
         }
 
         .instructions {
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            margin-top: 1rem;
+            margin-top: 8px;
+            color: var(--ink-muted-80);
             display: none;
         }
-
+        
         .instructions.visible {
             display: block;
-            animation: fadeIn 0.3s;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @media (max-width: 1024px) {
+        @media (max-width: 1068px) {
             main {
                 flex-direction: column;
+                padding: 24px;
             }
         }
     </style>
 </head>
 <body>
-    <header>
-        <h1><div class="pulse"></div> Traffic Monitor</h1>
-        <div style="font-size: 0.875rem; color: var(--text-muted)">Live via YOLOv8</div>
+    <header class="global-nav">
+        <div class="nav-link">Traffic Monitor</div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="nav-link" style="color: var(--body-muted);">Live via YOLOv8</div>
+            <button class="btn btn-dark-utility">Live</button>
+        </div>
     </header>
 
+    <div class="sub-nav-frosted">
+        <div class="tagline" style="color: var(--ink);">Dashboard</div>
+        <div class="caption" style="color: var(--ink-muted-80);">Stream: YOLOv8</div>
+    </div>
+
     <main>
-        <div class="video-container">
-            <div id="pink-badge">🚗 ¡Vehículo Rosa Detectado!</div>
-            <canvas id="video-canvas"></canvas>
+        <div class="store-utility-card video-container">
+            <div class="video-frame">
+                <div id="pink-badge">🚗 ¡Vehículo Rosa Detectado!</div>
+                <canvas id="video-canvas"></canvas>
+            </div>
         </div>
 
         <div class="stats-panel">
-            <div class="stat-card">
-                <div class="stat-title">Vehículos en Frame</div>
-                <div class="stat-value blue" id="val-vehicles">0</div>
+            <div class="store-utility-card stat-card">
+                <div class="body-strong" style="color: var(--ink-muted-80);">Vehículos en Frame</div>
+                <div class="display-lg stat-value blue" id="val-vehicles">0</div>
             </div>
             
-            <div class="stat-card">
-                <div class="stat-title">Peatones en ROI (Paso)</div>
-                <div class="stat-value green" id="val-pedestrians">0</div>
+            <div class="store-utility-card stat-card">
+                <div class="body-strong" style="color: var(--ink-muted-80);">Peatones en ROI (Paso)</div>
+                <div class="display-lg stat-value green" id="val-pedestrians">0</div>
             </div>
 
-            <div class="controls-card">
-                <div class="stat-title" style="margin-bottom: 1rem">Configuración de ROI</div>
-                <button class="btn" id="btn-edit">Editar Paso de Peatones</button>
-                <button class="btn primary" id="btn-save" style="display: none;">Guardar Polígono</button>
-                <button class="btn" id="btn-cancel" style="display: none;">Cancelar</button>
+            <div class="store-utility-card controls-card">
+                <div class="body-strong" style="margin-bottom: 8px;">Configuración de ROI</div>
+                <button class="btn btn-secondary-pill" id="btn-edit">Editar Paso de Peatones</button>
+                <button class="btn btn-primary" id="btn-save" style="display: none; width: 100%;">Guardar</button>
+                <button class="btn btn-secondary-pill" id="btn-cancel" style="display: none; width: 100%;">Cancelar</button>
                 
-                <div class="instructions" id="edit-instructions">
+                <div class="caption instructions" id="edit-instructions">
                     Haz click sobre el vídeo para definir los vértices del polígono (mínimo 3). 
                     Los vértices se conectarán automáticamente.
                 </div>
@@ -381,8 +462,8 @@
             canvas.classList.add('editing');
             
             btnEdit.style.display = 'none';
-            btnSave.style.display = 'block';
-            btnCancel.style.display = 'block';
+            btnSave.style.display = 'inline-flex';
+            btnCancel.style.display = 'inline-flex';
             instructions.classList.add('visible');
         });
 
@@ -391,7 +472,7 @@
             editedPolygon = [];
             canvas.classList.remove('editing');
             
-            btnEdit.style.display = 'block';
+            btnEdit.style.display = 'inline-flex';
             btnSave.style.display = 'none';
             btnCancel.style.display = 'none';
             instructions.classList.remove('visible');
@@ -414,7 +495,7 @@
                     // Success
                     isEditing = false;
                     canvas.classList.remove('editing');
-                    btnEdit.style.display = 'block';
+                    btnEdit.style.display = 'inline-flex';
                     btnSave.style.display = 'none';
                     btnCancel.style.display = 'none';
                     instructions.classList.remove('visible');

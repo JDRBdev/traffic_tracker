@@ -11,6 +11,7 @@ class DetectionResult:
     vehicle_count: int
     pedestrian_in_roi: int
     pink_vehicles: list[np.ndarray]
+    pink_vehicle_ids: list[int]
     annotated_frame: np.ndarray
 
 class TrafficDetector:
@@ -59,18 +60,20 @@ class TrafficDetector:
         annotated_frame = frame.copy()
         self._draw_roi(annotated_frame)
         
-        # Run inference (disable verbose output for speed)
-        results = self.model(frame, verbose=False)
+        # Run inference with tracking (disable verbose output for speed)
+        results = self.model.track(frame, persist=True, verbose=False)
         
         vehicle_count = 0
         pedestrian_in_roi = 0
         pink_vehicles = []
+        pink_vehicle_ids = []
         
         for result in results:
             boxes = result.boxes
+            if boxes is None: continue
             for box in boxes:
                 cls = int(box.cls[0])
-                # conf = float(box.conf[0])
+                track_id = int(box.id[0]) if box.id is not None else -1
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
                 
                 if cls == self.person_class:
@@ -97,10 +100,12 @@ class TrafficDetector:
                     
                     if is_pink:
                         pink_vehicles.append(crop)
+                        pink_vehicle_ids.append(track_id)
                         
         return DetectionResult(
             vehicle_count=vehicle_count,
             pedestrian_in_roi=pedestrian_in_roi,
             pink_vehicles=pink_vehicles,
+            pink_vehicle_ids=pink_vehicle_ids,
             annotated_frame=annotated_frame
         )
