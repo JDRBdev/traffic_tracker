@@ -1,5 +1,7 @@
 import asyncio
 import base64
+import time
+from collections import deque
 from contextlib import asynccontextmanager
 
 import cv2
@@ -17,6 +19,12 @@ from notifier import EmailNotifier
 detector: TrafficDetector | None = None
 notifier: EmailNotifier | None = None
 reader: StreamReader | None = None
+
+# Historical data for charts (last 60 seconds)
+history_data = deque(maxlen=60)
+last_history_timestamp = 0.0
+current_max_vehicles = 0
+current_max_pedestrians = 0
 
 
 @asynccontextmanager
@@ -77,6 +85,12 @@ def get_roi():
     return {"polygon": detector.roi_polygon.tolist() if detector else []}
 
 
+@app.get("/api/history")
+def get_history():
+    """Returns the historical data for the frontend charts."""
+    return {"history": list(history_data)}
+
+
 @app.post("/config/roi")
 def update_roi(payload: ROIPayload):
     """Hot-updates the ROI polygon."""
@@ -111,6 +125,23 @@ async def websocket_endpoint(websocket: WebSocket):
             # Run detection
             if detector:
                 result = detector.detect(frame)
+
+                # Update history
+                global last_history_timestamp, current_max_vehicles, current_max_pedestrians
+                now = time.time()
+                current_max_vehicles = max(current_max_vehicles, result.vehicle_count)
+                current_max_pedestrians = max(current_max_pedestrians, result.pedestrian_in_roi)
+
+                if now - last_history_timestamp >= 1.0:
+                    timestamp_str = time.strftime("%H:%M:%S", time.localtime(now))
+                    history_data.append({
+                        "time": timestamp_str,
+                        "vehicles": current_max_vehicles,
+                        "pedestrians": current_max_pedestrians
+                    })
+                    last_history_timestamp = now
+                    current_max_vehicles = 0
+                    current_max_pedestrians = 0
 
                 # Check for pink vehicles and trigger notification
                 pink_detected = len(result.pink_vehicles) > 0

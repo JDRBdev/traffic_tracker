@@ -296,6 +296,9 @@
             }
         }
     </style>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <header class="global-nav">
@@ -311,35 +314,44 @@
         <div class="caption" style="color: var(--ink-muted-80);">Stream: YOLOv8</div>
     </div>
 
-    <main>
-        <div class="store-utility-card video-container">
-            <div class="video-frame">
-                <div id="pink-badge">🚗 ¡Vehículo Rosa Detectado!</div>
-                <canvas id="video-canvas"></canvas>
+    <main class="flex flex-col">
+        <div class="flex flex-col lg:flex-row gap-8 w-full">
+            <div class="store-utility-card video-container">
+                <div class="video-frame">
+                    <div id="pink-badge">🚗 ¡Vehículo Rosa Detectado!</div>
+                    <canvas id="video-canvas"></canvas>
+                </div>
+            </div>
+
+            <div class="stats-panel">
+                <div class="store-utility-card stat-card">
+                    <div class="body-strong" style="color: var(--ink-muted-80);">Vehículos en Frame</div>
+                    <div class="display-lg stat-value blue" id="val-vehicles">0</div>
+                </div>
+                
+                <div class="store-utility-card stat-card">
+                    <div class="body-strong" style="color: var(--ink-muted-80);">Peatones en ROI (Paso)</div>
+                    <div class="display-lg stat-value green" id="val-pedestrians">0</div>
+                </div>
+
+                <div class="store-utility-card controls-card">
+                    <div class="body-strong" style="margin-bottom: 8px;">Configuración de ROI</div>
+                    <button class="btn btn-secondary-pill" id="btn-edit">Editar Paso de Peatones</button>
+                    <button class="btn btn-primary" id="btn-save" style="display: none; width: 100%;">Guardar</button>
+                    <button class="btn btn-secondary-pill" id="btn-cancel" style="display: none; width: 100%;">Cancelar</button>
+                    
+                    <div class="caption instructions" id="edit-instructions">
+                        Haz click sobre el vídeo para definir los vértices del polígono (mínimo 3). 
+                        Los vértices se conectarán automáticamente.
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="stats-panel">
-            <div class="store-utility-card stat-card">
-                <div class="body-strong" style="color: var(--ink-muted-80);">Vehículos en Frame</div>
-                <div class="display-lg stat-value blue" id="val-vehicles">0</div>
-            </div>
-            
-            <div class="store-utility-card stat-card">
-                <div class="body-strong" style="color: var(--ink-muted-80);">Peatones en ROI (Paso)</div>
-                <div class="display-lg stat-value green" id="val-pedestrians">0</div>
-            </div>
-
-            <div class="store-utility-card controls-card">
-                <div class="body-strong" style="margin-bottom: 8px;">Configuración de ROI</div>
-                <button class="btn btn-secondary-pill" id="btn-edit">Editar Paso de Peatones</button>
-                <button class="btn btn-primary" id="btn-save" style="display: none; width: 100%;">Guardar</button>
-                <button class="btn btn-secondary-pill" id="btn-cancel" style="display: none; width: 100%;">Cancelar</button>
-                
-                <div class="caption instructions" id="edit-instructions">
-                    Haz click sobre el vídeo para definir los vértices del polígono (mínimo 3). 
-                    Los vértices se conectarán automáticamente.
-                </div>
+        <div class="store-utility-card mt-8 w-full p-6">
+            <div class="body-strong mb-4 text-[var(--ink-muted-80)]">Tendencia Temporal (últimos 60s)</div>
+            <div class="relative w-full h-[300px]">
+                <canvas id="history-chart"></canvas>
             </div>
         </div>
     </main>
@@ -397,6 +409,33 @@
                         renderCanvas();
                     };
                     img.src = 'data:image/jpeg;base64,' + data.frame;
+                }
+
+                // Chart aggregation logic (1 point max per sec)
+                const now = new Date();
+                const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                                now.getMinutes().toString().padStart(2, '0') + ':' + 
+                                now.getSeconds().toString().padStart(2, '0');
+                
+                if (timeStr !== lastSecondTime) {
+                    if (lastSecondTime !== "" && trafficChart) {
+                        timeHistory.push(lastSecondTime);
+                        vehiclesHistory.push(currentMaxVehicles);
+                        pedestriansHistory.push(currentMaxPedestrians);
+                        
+                        if (timeHistory.length > 60) {
+                            timeHistory.shift();
+                            vehiclesHistory.shift();
+                            pedestriansHistory.shift();
+                        }
+                        trafficChart.update();
+                    }
+                    lastSecondTime = timeStr;
+                    currentMaxVehicles = data.vehicle_count;
+                    currentMaxPedestrians = data.pedestrian_in_roi;
+                } else {
+                    currentMaxVehicles = Math.max(currentMaxVehicles, data.vehicle_count);
+                    currentMaxPedestrians = Math.max(currentMaxPedestrians, data.pedestrian_in_roi);
                 }
             };
 
@@ -508,8 +547,79 @@
             }
         });
 
+        // Init Chart Data
+        let timeHistory = [];
+        let vehiclesHistory = [];
+        let pedestriansHistory = [];
+        let trafficChart = null;
+
+        let lastSecondTime = "";
+        let currentMaxVehicles = 0;
+        let currentMaxPedestrians = 0;
+
+        async function initHistory() {
+            try {
+                const res = await fetch('/api/history');
+                if (res.ok) {
+                    const data = await res.json();
+                    data.history.forEach(pt => {
+                        timeHistory.push(pt.time);
+                        vehiclesHistory.push(pt.vehicles);
+                        pedestriansHistory.push(pt.pedestrians);
+                    });
+                }
+            } catch (err) {
+                console.error("Error fetching history", err);
+            }
+            initChart();
+        }
+
+        function initChart() {
+            const ctxChart = document.getElementById('history-chart').getContext('2d');
+            trafficChart = new Chart(ctxChart, {
+                type: 'line',
+                data: {
+                    labels: timeHistory,
+                    datasets: [
+                        {
+                            label: 'Vehículos',
+                            data: vehiclesHistory,
+                            borderColor: '#0066cc',
+                            backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Peatones en Paso',
+                            data: pedestriansHistory,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        x: { display: true },
+                        y: { beginAtZero: true, suggestedMax: 10 }
+                    },
+                    plugins: { legend: { position: 'top' } }
+                }
+            });
+        }
+
         // Init
         connect();
+        initHistory();
         
         // Add a dummy test image to show canvas bounds if ws is not immediately ready
         ctx.fillStyle = '#1e293b';
