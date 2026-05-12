@@ -305,6 +305,7 @@
         <div class="nav-link">Traffic Monitor</div>
         <div style="display: flex; align-items: center; gap: 12px;">
             <div class="nav-link" style="color: var(--body-muted);">Live via YOLOv8</div>
+            <button class="btn btn-dark-utility" id="btn-heatmap" title="Mostrar/ocultar mapa de calor">🔥 Heatmap</button>
             <button class="btn btn-dark-utility" id="btn-tts" title="Activar alertas de voz">🔇 Activar Voz</button>
             <button class="btn btn-dark-utility">Live</button>
         </div>
@@ -369,6 +370,7 @@
         const btnCancel = document.getElementById('btn-cancel');
         const instructions = document.getElementById('edit-instructions');
         const btnTts = document.getElementById('btn-tts');
+        const btnHeatmap = document.getElementById('btn-heatmap');
 
         let ws = null;
         let pinkHideTimeout = null;
@@ -388,6 +390,29 @@
             if (ttsEnabled && 'speechSynthesis' in window) {
                 const u = new SpeechSynthesisUtterance("");
                 window.speechSynthesis.speak(u);
+            }
+        });
+
+        // Heatmap Toggle
+        let heatmapEnabled = false;
+        btnHeatmap.addEventListener('click', async () => {
+            heatmapEnabled = !heatmapEnabled;
+            
+            try {
+                const response = await fetch('/config/heatmap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: heatmapEnabled })
+                });
+                
+                if (response.ok) {
+                    btnHeatmap.style.backgroundColor = heatmapEnabled ? 'var(--primary)' : 'var(--ink)';
+                } else {
+                    heatmapEnabled = !heatmapEnabled; // Revert on failure
+                }
+            } catch (err) {
+                console.error('Error toggling heatmap:', err);
+                heatmapEnabled = !heatmapEnabled; // Revert on failure
             }
         });
 

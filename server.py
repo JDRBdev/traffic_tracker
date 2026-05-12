@@ -79,6 +79,10 @@ class ROIPayload(BaseModel):
     polygon: list[list[int]]
 
 
+class HeatmapPayload(BaseModel):
+    enabled: bool
+
+
 @app.get("/config/roi")
 def get_roi():
     """Returns the current ROI polygon."""
@@ -99,6 +103,15 @@ def update_roi(payload: ROIPayload):
         # We also keep it in settings to keep state consistent during runtime
         settings.ROI_POLYGON = payload.polygon
         return {"status": "success", "vertices": len(payload.polygon)}
+    return {"status": "error", "message": "Detector not initialized"}
+
+
+@app.post("/config/heatmap")
+def toggle_heatmap(payload: HeatmapPayload):
+    """Hot-updates the heatmap rendering state."""
+    if detector:
+        detector.toggle_heatmap(payload.enabled)
+        return {"status": "success", "enabled": payload.enabled}
     return {"status": "error", "message": "Detector not initialized"}
 
 
