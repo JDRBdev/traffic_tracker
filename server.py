@@ -10,15 +10,19 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from loguru import logger
 
+import os
+
 from config import settings
 from capture import StreamReader, get_stream_url
 from detector import TrafficDetector
 from notifier import EmailNotifier
+from sheets_logger import GoogleSheetsLogger
 
 # Global instances
 detector: TrafficDetector | None = None
 notifier: EmailNotifier | None = None
 reader: StreamReader | None = None
+sheets_logger: GoogleSheetsLogger | None = None
 
 # Historical data for charts (last 60 seconds)
 history_data = deque(maxlen=60)
@@ -29,11 +33,12 @@ current_max_pedestrians = 0
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global detector, notifier, reader
+    global detector, notifier, reader, sheets_logger
     logger.info("Starting up traffic-monitor server...")
 
     detector = TrafficDetector()
     notifier = EmailNotifier()
+    sheets_logger = GoogleSheetsLogger()
 
     # Exponential backoff for stream URL extraction
     max_attempts = 5
@@ -156,12 +161,19 @@ async def websocket_endpoint(websocket: WebSocket):
                     current_max_vehicles = 0
                     current_max_pedestrians = 0
 
-                # Check for pink vehicles and trigger notification
+                # Check for pink vehicles and trigger notification/logging
                 pink_detected = len(result.pink_vehicles) > 0
-                if pink_detected and notifier:
-                    # Notify for each pink vehicle found
+                if pink_detected:
                     for crop, track_id in zip(result.pink_vehicles, result.pink_vehicle_ids):
-                        asyncio.create_task(asyncio.to_thread(notifier.notify, crop, track_id))
+                        if notifier:
+                            asyncio.create_task(asyncio.to_thread(notifier.notify, crop, track_id))
+                        if sheets_logger:
+                            asyncio.create_task(asyncio.to_thread(sheets_logger.log_event, "Pink Vehicle", "ROI", crop, track_id))
+                            
+                # Check for pedestrians and log to sheets
+                if result.pedestrian_in_roi > 0 and sheets_logger:
+                    for crop, track_id in zip(result.pedestrian_crops_in_roi, result.pedestrian_ids_in_roi):
+                        asyncio.create_task(asyncio.to_thread(sheets_logger.log_event, "Pedestrian", "ROI", crop, track_id))
 
                 # Encode frame for frontend
                 _, buf = cv2.imencode(".jpg", result.annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
@@ -188,5 +200,9 @@ async def websocket_endpoint(websocket: WebSocket):
         logger.exception(f"WebSocket error: {e}")
         await websocket.close()
 
-# Mount the static frontend directory at the root (must be at the end to avoid intercepting routes)
+# Mount static files
+if settings.SAVE_CAPTURES_TO_DISK:
+    os.makedirs(settings.EVENT_CAPTURES_DIR, exist_ok=True)
+    app.mount("/captures", StaticFiles(directory=settings.EVENT_CAPTURES_DIR), name="captures")
+
 app.mount("/", StaticFiles(directory="frontend", html=True), name="frontend")

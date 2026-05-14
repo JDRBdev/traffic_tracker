@@ -51,6 +51,13 @@ class Settings(BaseSettings):
     EMAIL_TO: str = ""
     SENDGRID_API_KEY: str = ""
 
+    # --- Google Sheets Integration ---
+    GOOGLE_SHEETS_CREDENTIALS_FILE: str = "credentials.json"
+    GOOGLE_SHEET_NAME: str = "Traffic_tracker"
+    EVENT_CAPTURES_DIR: str = "event_captures"
+    SAVE_CAPTURES_TO_DISK: bool = True
+    SHEETS_COOLDOWN_SECONDS: int = 10
+
     # --- Debug ---
     DEBUG: bool = False
 

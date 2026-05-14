@@ -11,3 +11,5 @@ dist/
 build/
 *.egg-info/
 .mypy_cache/
+credentials.json
+event_captures/

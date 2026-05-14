@@ -10,6 +10,8 @@ from config import settings
 class DetectionResult:
     vehicle_count: int
     pedestrian_in_roi: int
+    pedestrian_ids_in_roi: list[int]
+    pedestrian_crops_in_roi: list[np.ndarray]
     pink_vehicles: list[np.ndarray]
     pink_vehicle_ids: list[int]
     annotated_frame: np.ndarray
@@ -81,6 +83,8 @@ class TrafficDetector:
         
         vehicle_count = 0
         pedestrian_in_roi = 0
+        pedestrian_ids_in_roi = []
+        pedestrian_crops_in_roi = []
         pink_vehicles = []
         pink_vehicle_ids = []
         
@@ -97,6 +101,10 @@ class TrafficDetector:
                     # Check if inside ROI
                     if cv2.pointPolygonTest(self.roi_polygon, (cx, cy), False) >= 0:
                         pedestrian_in_roi += 1
+                        pedestrian_ids_in_roi.append(track_id)
+                        crop = frame[max(0, y1):y2, max(0, x1):x2]
+                        pedestrian_crops_in_roi.append(crop)
+                        
                         cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 165, 255), 2)
                         cv2.circle(annotated_frame, (cx, cy), 4, (0, 165, 255), -1)
                         cv2.putText(annotated_frame, "Person (ROI)", (x1, max(0, y1 - 10)), 
@@ -135,6 +143,8 @@ class TrafficDetector:
         return DetectionResult(
             vehicle_count=vehicle_count,
             pedestrian_in_roi=pedestrian_in_roi,
+            pedestrian_ids_in_roi=pedestrian_ids_in_roi,
+            pedestrian_crops_in_roi=pedestrian_crops_in_roi,
             pink_vehicles=pink_vehicles,
             pink_vehicle_ids=pink_vehicle_ids,
             annotated_frame=annotated_frame
