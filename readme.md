@@ -74,7 +74,7 @@ The system is designed with a clear separation of concerns:
 
 4. Run the server:
    ```bash
-   python server.py
+   python.exe -m uvicorn server:app --host 127.0.0.1 --port 8000 --reload
    ```
 
 5. Access the dashboard:
